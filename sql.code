@@ -1,0 +1,9 @@
+## Explore the dataset 
+```
+select name
+from company_dim right join job_postings 
+on company_dim.company_id = job_postings.company_id
+where salary_year_avg is not null
+order by salary_year_avg desc
+limit 10;
+```
