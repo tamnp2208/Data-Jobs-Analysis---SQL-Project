@@ -1,0 +1,109 @@
+## Explore the dataset 
+-- Top 10 companies offer the highest salaries in data industry
+select name
+from company_dim right join job_postings 
+on company_dim.company_id = job_postings.company_id
+where salary_year_avg is not null
+order by salary_year_avg desc
+limit 10;
+
+-- Top 5 month highest job postings
+WITH get_day_count AS (
+	SELECT
+		EXTRACT(month FROM job_posted_date) as month,
+		count(*) AS daily_job_count,
+		DENSE_RANK() OVER (ORDER BY count(*) DESC) AS rnk
+	FROM
+		job_postings
+	GROUP BY
+		month
+	ORDER BY
+		month)
+SELECT month, daily_job_count
+FROM get_day_count
+WHERE rnk < 6
+ORDER BY rnk;
+
+-- Top 5 job posted
+select job_title_short, count (*) as top_5_job_posted
+from job_postings
+group by job_title_short
+order by top_5_job_posted desc
+limit 5;
+
+-- List job require degree
+select distinct(job_title_short)
+from job_postings
+where job_no_degree_mention = 'FALSE';
+
+## Business Question
+-- Top-paying data analyst job
+select  job_title, job_country, job_schedule_type, salary_year_avg, name
+from company_dim
+right join job_postings
+on company_dim.company_id = job_postings.company_id
+where job_title_short = 'Data Analyst'
+and job_location = 'Anywhere'
+and salary_year_avg is not null
+order by salary_year_avg desc
+limit 10;
+
+-- Skill sets for high-paying positions
+with top_paying_jobs as(
+	select job_id, job_title,job_country, name, salary_year_avg
+	from company_dim
+	right join job_postings
+	on company_dim.company_id = job_postings.company_id
+	where job_title_short = 'Data Analyst'
+	and job_location = 'Anywhere'
+	and salary_year_avg is not null
+	order by salary_year_avg desc
+	limit 10)
+
+select name,job_country, job_title, skills
+from top_paying_jobs
+join skills_job_dim on top_paying_jobs.job_id = skills_job_dim.job_id
+join skills_dim on skills_job_dim.skill_id = skills_dim.skill_id
+;	
+
+
+-- In-Demand Skill sets for high-paying positions
+select skills, count(skills) as demand_count
+from job_postings
+join skills_job_dim on job_postings.job_id = skills_job_dim.job_id
+join skills_dim on skills_job_dim.skill_id = skills_dim.skill_id
+where job_title_short = 'Data Analyst'
+and job_location = 'Anywhere'
+group by skills
+order by demand_count desc
+limit 5;
+
+
+-- Skills Based on Salary
+select skills, round(avg(salary_year_avg),0) as avg_salary
+from  job_postings 
+join skills_job_dim on job_postings.job_id = skills_job_dim.job_id
+join skills_dim on skills_job_dim.skill_id = skills_dim.skill_id
+where job_title_short = 'Data Analyst'
+and job_location = 'Anywhere'
+and salary_year_avg is not null
+group by skills
+order by avg_salary desc
+limit 10;
+
+
+-- Most Optimal Skills to Learn
+select skills, count(skills) as demand_count, round(avg(salary_year_avg),0) as avg_salary
+from  job_postings 
+join skills_job_dim on job_postings.job_id = skills_job_dim.job_id
+join skills_dim on skills_job_dim.skill_id = skills_dim.skill_id
+where job_title_short = 'Data Analyst'
+and job_location = 'Anywhere'
+and salary_year_avg is not null
+group by skills
+having count(skills) > 10
+order by avg_salary desc, demand_count desc
+limit 10;
+
+
+
